@@ -13,8 +13,6 @@ public interface ProductJpaRepository extends JpaRepository<Product, UUID> {
 
     public Iterable<Product> findByName(String name);
 
-    public Product findByUuid(UUID uuid);
-
     public Iterable<Product> findByCategory(Category category);
 
 }

@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.Map;
 
 @org.immutables.value.Value.Immutable
-@JsonSerialize(as = ImmutableCurrency.class)
-@JsonDeserialize(as = ImmutableCurrency.class)
-public interface Currency {
+@JsonSerialize(as = ImmutableCurrencyRate.class)
+@JsonDeserialize(as = ImmutableCurrencyRate.class)
+public interface CurrencyRate {
 
     String getBase();
 

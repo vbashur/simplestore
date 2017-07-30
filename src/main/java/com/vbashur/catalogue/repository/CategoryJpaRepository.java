@@ -12,8 +12,4 @@ public interface CategoryJpaRepository extends JpaRepository<Category, UUID> {
 
     public Category findByName(String name);
 
-    public Category findByUuid(UUID uuid);
-//
-//    public void deleteByUuid(UUID uuid);
-
 }

@@ -4,16 +4,20 @@ import com.vbashur.catalogue.model.Category;
 import com.vbashur.catalogue.model.Product;
 import com.vbashur.catalogue.repository.CategoryJpaRepository;
 import com.vbashur.catalogue.repository.ProductJpaRepository;
+import com.vbashur.catalogue.service.CurrencyExchangeService;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/catalogue/")
 public class CatalogueController {
-
 
     @Autowired
     private ProductJpaRepository productJpaRepository;
@@ -21,20 +25,8 @@ public class CatalogueController {
     @Autowired
     private CategoryJpaRepository categoryJpaRepository;
 
-
-//    @RequestMapping(path = "/repo", method = RequestMethod.GET)
-//    public Iterable<Product> findByRepo() throws IOException {
-//
-//        Category category = new Category();
-//        category.setName("categoryTest");
-//
-//        Product product = new Product();
-//        product.setName("productName");
-//        product.setPrice(12.4);
-//        product.setCategory(Arrays.asList(category));
-//        productJpaRepository.saveAndFlush(product);
-//        return productJpaRepository.findAll();
-//    }
+    @Autowired
+    private CurrencyExchangeService currencyExchangeService;
 
     @RequestMapping(value = "/product", method = RequestMethod.POST)
     public void saveProduct(@RequestBody Product product) {
@@ -42,33 +34,53 @@ public class CatalogueController {
         newProduct.setCategory(product.getCategory());
         newProduct.setName(product.getName());
         newProduct.setPrice(product.getPrice());
+        newProduct.setCurrency(product.getCurrency());
         productJpaRepository.save(newProduct);
     }
 
     @RequestMapping(value = "/product", method = RequestMethod.GET)
-    public Iterable<Product> listProducts() {
+    public Iterable<Product> listProducts(@RequestParam(required = false) String currency) {
+        if (StringUtils.isNotEmpty(currency)) {
+            return convertProductPrices(productJpaRepository.findAll(), currency);
+        }
         return productJpaRepository.findAll();
     }
 
     @RequestMapping(value = "/product/name/{name}", method = RequestMethod.GET)
-    public Iterable<Product> getProductByName(@PathVariable String name) {
+    public Iterable<Product> getProductByName(@PathVariable String name,
+                                              @RequestParam(required = false) String currency) {
+        if (StringUtils.isNotEmpty(currency)) {
+            return convertProductPrices(productJpaRepository.findByName(name), currency);
+        }
         return productJpaRepository.findByName(name);
     }
 
     @RequestMapping(value = "/product/{uuid}", method = RequestMethod.GET)
-    public Product getProductByUuid(@PathVariable UUID uuid) {
-        return productJpaRepository.findByUuid(uuid);
+    public Product getProductByUuid(@PathVariable UUID uuid,
+                                    @RequestParam(required = false) String currency) {
+        if (StringUtils.isNotEmpty(currency)) {
+            return convertProductPrice(productJpaRepository.findOne(uuid), currency);
+        }
+        return productJpaRepository.findOne(uuid);
     }
 
     @RequestMapping(value = "/product/category/name/{categoryName}", method = RequestMethod.GET)
-    public Iterable<Product> getProductsByCategoryName(@PathVariable String categoryName) {
+    public Iterable<Product> getProductsByCategoryName(@PathVariable String categoryName,
+                                                       @RequestParam(required = false) String currency) {
         Category category = categoryJpaRepository.findByName(categoryName);
+        if (StringUtils.isNotEmpty(currency)) {
+            return convertProductPrices(productJpaRepository.findByCategory(category), currency);
+        }
         return productJpaRepository.findByCategory(category);
     }
 
     @RequestMapping(value = "/product/category/{categoryUuid}", method = RequestMethod.GET)
-    public Iterable<Product> getProductsByCategoryUuid(@PathVariable UUID categoryUuid) {
-        Category category = categoryJpaRepository.findByUuid(categoryUuid);
+    public Iterable<Product> getProductsByCategoryUuid(@PathVariable UUID categoryUuid,
+                                                       @RequestParam(required = false) String currency) {
+        Category category = categoryJpaRepository.findOne(categoryUuid);
+        if (StringUtils.isNotEmpty(currency)) {
+            return convertProductPrices(productJpaRepository.findByCategory(category), currency);
+        }
         return productJpaRepository.findByCategory(category);
     }
 
@@ -102,7 +114,7 @@ public class CatalogueController {
 
     @RequestMapping(value = "/category/{uuid}", method = RequestMethod.GET)
     public Category getCategoryByUuid(@PathVariable UUID uuid) {
-        return categoryJpaRepository.findByUuid(uuid);
+        return categoryJpaRepository.findOne(uuid);
     }
 
     @RequestMapping(value = "/category/{uuid}", method = RequestMethod.DELETE)
@@ -114,5 +126,22 @@ public class CatalogueController {
     public Iterable<Category> updateCategoryByUuid(@PathVariable UUID uuid, @RequestBody Category category) {
         category.setUuid(uuid);
         return categoryJpaRepository.save(Arrays.asList(category));
+    }
+
+    private Iterable<Product> convertProductPrices(Iterable<Product> products, String targetCurrency) {
+        List<Product> convertedProducts = new LinkedList<>();
+        for (Product product : products) {
+            Product convertedProduct = convertProductPrice(product, targetCurrency);
+            convertedProducts.add(convertedProduct);
+        }
+        return convertedProducts;
+    }
+
+    private Product convertProductPrice(Product product, String targetCurrency) {
+        Double convertedPrice = currencyExchangeService.getRate(product.getPrice(), product.getCurrency(), targetCurrency);
+        Product convertedProduct = SerializationUtils.clone(product);
+        convertedProduct.setPrice(convertedPrice);
+        convertedProduct.setCurrency(targetCurrency);
+        return convertedProduct;
     }
 }

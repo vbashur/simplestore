@@ -43,6 +43,7 @@ Request body example:
 {
     "name": "Paulaner Helles",
     "price": 1.09,
+    "currency" : "EUR",
     "category": [
      {
         "uuid": "52d84330-4bf2-4e2e-a713-44dd2d24c41c",
@@ -51,25 +52,28 @@ Request body example:
     ]
 }
 ````
-Read all available products
+
+> For Read operations add optional 'currency' argument to get products price in specific currency.
+
+Read all available products.
 ```
-GET        /api/catalogue/product
+GET        /api/catalogue/product?currency=:currency
 ```
-Find product by name
+Find product by name. Add optional 'currency' argument to get products in specific currency
 ```
-GET        /api/catalogue/product/name/:name
+GET        /api/catalogue/product/name/:name?currency=:currency
 ```
 Find product by uuid
 ```
-GET        /api/catalogue/product/:uuid
+GET        /api/catalogue/product/:uuid?currency=:currency
 ```
 Find products by category name
 ```
-GET        /api/catalogue/product/category/name/:categoryName
+GET        /api/catalogue/product/category/name/:categoryName?currency=:currency
 ```
 Find products by category uuid
 ```
-GET        /api/catalogue/product/category/:categoryUuid
+GET        /api/catalogue/product/category/:categoryUuid?currency=:currency
 ```
 Update product by product uuid, correct product represented in JSON format must be provided as a payload
 ```

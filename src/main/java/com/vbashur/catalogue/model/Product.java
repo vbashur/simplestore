@@ -12,7 +12,10 @@ public class Product extends EntityBase {
     @Column
     private Double price;
 
-    @ManyToMany(fetch = FetchType.EAGER/*, cascade = {CascadeType.ALL}*/)
+    @Column
+    private String currency;
+
+    @ManyToMany(fetch = FetchType.EAGER)
     private List<Category> category;
 
     public String getName() {
@@ -39,5 +42,8 @@ public class Product extends EntityBase {
         this.category = category;
     }
 
+    public String getCurrency() { return currency; }
+
+    public void setCurrency(String currency) { this.currency = currency; }
 
 }
