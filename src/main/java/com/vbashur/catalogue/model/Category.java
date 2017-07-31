@@ -23,6 +23,14 @@ public class Category extends EntityBase {
         this.name = name;
     }
 
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
+
     @PreRemove
     private void removeCategoryFromUsers() {
         for (Product p : products) {
