@@ -1,5 +1,6 @@
 package com.vbashur.catalogue.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vbashur.catalogue.CatalogueApplication;
 import com.vbashur.catalogue.model.Category;
 import com.vbashur.catalogue.repository.CategoryJpaRepository;
@@ -16,17 +17,19 @@ import org.springframework.mock.http.MockHttpOutputMessage;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = CatalogueApplication.class)
@@ -68,14 +71,45 @@ public class CatalogueControllerIntegrationTest {
     }
 
     @Test
-    public void testAddNewCategory() throws Exception {
+    public void testAddGetDeleteCategory() throws Exception {
         String newCategoryName = UUID.randomUUID().toString();
         Category category = new Category();
         category.setName(newCategoryName);
+
+        // Add category
         mvc.perform(post("/api/catalogue/category")
                 .content(this.json(category))
-                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
-        ).andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().isOk());
+
+        // List all categories
+        MvcResult result = mvc.perform(get("/api/catalogue/category"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name", is(category.getName())))
+                .andReturn();
+
+        ObjectMapper mapper = new ObjectMapper();
+        Category[] categories = mapper.readValue(result.getResponse().getContentAsString().getBytes(), Category[].class);
+
+        // Read the specific category
+        mvc.perform(get("/api/catalogue/category/" + categories[0].getUuid()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(jsonPath("$.name", is(category.getName())));
+
+        // Read the category
+        mvc.perform(delete("/api/catalogue/category/" + categories[0].getUuid())
+                .content(this.json(category))
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().isOk());
+
+        // Check that there are no categories
+        mvc.perform(get("/api/catalogue/category"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(jsonPath("$", hasSize(0)));
 
     }
 
@@ -85,5 +119,6 @@ public class CatalogueControllerIntegrationTest {
                 o, MediaType.APPLICATION_JSON, mockHttpOutputMessage);
         return mockHttpOutputMessage.getBodyAsString();
     }
+
 
 }
