@@ -1,4 +1,6 @@
+# Simple store
 
+ Simple application that demonstrates Spring Rest API and Spring JPA features
 
 ### HTTP routes
 
