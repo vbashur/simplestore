@@ -89,3 +89,15 @@ DELETE   /api/catalogue/product/:uuid
 
 _if product or category name contains space ' ' replace it with '%20', for example /api/catalogue/product/name/Paulaner%20Helles, [see more details](https://en.wikipedia.org/wiki/Percent-encoding)_
 
+
+### Swagger documentation
+
+Get the list of available endpoints and model
+```
+GET     /v2/api-docs
+```
+
+Swagger web console
+```
+GET     /swagger-ui.html
+```

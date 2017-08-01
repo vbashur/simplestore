@@ -3,6 +3,7 @@ package com.vbashur.catalogue.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vbashur.catalogue.CatalogueApplication;
 import com.vbashur.catalogue.model.Category;
+import com.vbashur.catalogue.model.Product;
 import com.vbashur.catalogue.repository.CategoryJpaRepository;
 import com.vbashur.catalogue.repository.ProductJpaRepository;
 import org.junit.Before;
@@ -10,6 +11,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -20,15 +22,19 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.util.NestedServletException;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringRunner.class)
@@ -93,13 +99,19 @@ public class CatalogueControllerIntegrationTest {
         ObjectMapper mapper = new ObjectMapper();
         Category[] categories = mapper.readValue(result.getResponse().getContentAsString().getBytes(), Category[].class);
 
-        // Read the specific category
+        // Read the specific category by UUID
         mvc.perform(get("/api/catalogue/category/" + categories[0].getUuid()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
                 .andExpect(jsonPath("$.name", is(category.getName())));
 
-        // Read the category
+        // Read the specific category by name
+        mvc.perform(get("/api/catalogue/category/name/" + category.getName()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(jsonPath("$.name", is(category.getName())));
+
+        // Delete the category
         mvc.perform(delete("/api/catalogue/category/" + categories[0].getUuid())
                 .content(this.json(category))
                 .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
@@ -110,6 +122,56 @@ public class CatalogueControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
                 .andExpect(jsonPath("$", hasSize(0)));
+
+    }
+
+
+
+    @Test (expected = NestedServletException.class)
+    public void testCategoryNotFoundURLRequest() throws Exception {
+        String newCategoryName = UUID.randomUUID().toString();
+        Category category = new Category();
+        category.setName(newCategoryName);
+
+        // Add category
+        mvc.perform(post("/api/catalogue/category")
+                .content(this.json(category))
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().isOk());
+
+        // Attempt to fetch unregistered category by uuid
+        mvc.perform(get("/api/catalogue/category/" + UUID.randomUUID().toString())
+                .content(this.json(category))
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
+
+        // Attempt to fetch unregistered category by name
+        mvc.perform(get("/api/catalogue/category/name/" + UUID.randomUUID().toString())
+                .content(this.json(category))
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
+
+        // Attempt to delete unregistered category by name
+        mvc.perform(delete("/api/catalogue/category/" + UUID.randomUUID().toString())
+                .content(this.json(category))
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    public void testInvalidURLRequest() throws Exception {
+        String newCategoryName = UUID.randomUUID().toString();
+        Category category = new Category();
+        category.setName(newCategoryName);
+
+        // Add category
+        mvc.perform(post("/api/catalogue/category" + UUID.randomUUID().toString())
+                .content(this.json(category))
+                .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+                .andExpect(status().isNotFound());
+
 
     }
 
